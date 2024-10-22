@@ -1,0 +1,5 @@
+<h2>Sock List</h2>
+<p>List of socks available for sale.</p>
+<div *ngFor="let sock of socks">
+    {{ sock.name }} - {{ sock.color }} - {{ sock.size }} - ${{ sock.price }}
+</div>
