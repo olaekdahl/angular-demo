@@ -1,6 +1,19 @@
 import express from 'express';
 import cors from 'cors';
 import { WebSocketServer } from 'ws';
+import sql from 'mssql';
+
+// SQL Server Configuration
+const dbConfig = {
+  user: 'sa',  // This is not a good practice. For demo purposes only.
+  password: 'password',  // 🤢 This is not a good practice. For demo purposes only.
+  server: 'localhost', // e.g., 'localhost'
+  database: 'Northwind',
+  options: {
+    encrypt: true,       // Use encryption
+    trustServerCertificate: true // Only for development, not recommended for production
+  }
+}
 
 const app = express();
 app.use(cors());
@@ -17,6 +30,26 @@ const mockSocks = [
 // Endpoint to get socks data
 app.get('/api/socks', (req, res) => {
   res.json(mockSocks);
+});
+
+// Route to get all products
+app.get('/api/products', async (req, res) => {
+  try {
+    // Connect to SQL Server
+    const pool = await sql.connect(dbConfig);
+
+    // Query to select all rows from the 'products' table
+    const result = await pool.request().query('SELECT * FROM products');
+
+    // Send the result as a response
+    res.json(result.recordset);
+  } catch (err) {
+    // Handle any errors
+    res.status(500).send('Error fetching products: ' + err.message);
+  } finally {
+    // Close the SQL connection
+    sql.close();
+  }
 });
 
 // Start the Express server
