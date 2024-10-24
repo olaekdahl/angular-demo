@@ -16,7 +16,7 @@ export class SocksService {
   //   return mockSocks;
   // }
 
-  private readonly apiUrl = 'http://localhost:3000/api/socks';
+  private readonly apiUrl = 'http://localhost:3000/api/products';
 
   constructor(private readonly http: HttpClient) {}
 

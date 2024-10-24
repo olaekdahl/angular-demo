@@ -2,6 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import { WebSocketServer } from 'ws';
 import sql from 'mssql';
+import jwt from 'jsonwebtoken';
+
+// Secret key for JWT
+const JWT_SECRET = 'your_jwt_secret'; // Use a secure, long, and random key in production
 
 // SQL Server Configuration
 const dbConfig = {
@@ -17,8 +21,60 @@ const dbConfig = {
 
 const app = express();
 app.use(cors());
+app.use(express.json());
+
+// JWT Authentication middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+
+  // Ensure the authorization header exists and has "Bearer" prefix
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).send('Access Denied');
+  }
+
+  // Extract the token by removing "Bearer " prefix
+  const token = authHeader.split(' ')[1];
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      console.log(err);  // Log the error for debugging
+      return res.status(403).send('Invalid Token');
+    }
+    
+    req.user = user; // Store user data in request
+    next(); // Continue to the next middleware or route handler
+  });
+};
 
 const port = 3000;
+
+// Endpoint for login
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
+
+  // This is a demo; you should fetch users from the database
+  if (username === 'admin' && password === 'password') {
+    // Generate JWT token
+    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
+    return res.json({ token });
+  }
+
+  res.status(401).send('Invalid credentials');
+});
+
+// Protected route example
+app.get('/api/protected/products', authenticateToken, async (req, res) => {
+  console.log(authenticateToken);
+  try {
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request().query('select name, color, size, price from socks;');
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).send('Error fetching products: ' + err.message);
+  } finally {
+    sql.close();
+  }
+});
 
 // Mock data for socks
 const mockSocks = [
@@ -39,7 +95,7 @@ app.get('/api/products', async (req, res) => {
     const pool = await sql.connect(dbConfig);
 
     // Query to select all rows from the 'products' table
-    const result = await pool.request().query('SELECT * FROM products');
+    const result = await pool.request().query('select name, color, size, price from socks;');
 
     // Send the result as a response
     res.json(result.recordset);
